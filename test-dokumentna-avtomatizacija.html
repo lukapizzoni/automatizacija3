@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="sl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Test — AI dokumentna avtomatizacija</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  body{ font-family: system-ui, sans-serif; max-width: 760px; margin: 40px auto; padding: 0 20px; background:#0B0906; color:#F3ECDA; }
+  h1{ font-size: 22px; }
+  .box{ border: 1px solid #2C2717; border-radius: 12px; padding: 20px; margin-top: 20px; background:#17130C; }
+  input[type=file]{ margin: 10px 0; }
+  button{ background:#CDA349; color:#0B0906; border:none; padding: 10px 18px; border-radius: 8px; font-weight: 700; cursor:pointer; }
+  button:disabled{ opacity: .5; cursor: not-allowed; }
+  pre{ white-space: pre-wrap; background:#100D08; padding: 14px; border-radius: 8px; font-size: 13px; overflow-x:auto; }
+  .status{ font-size: 13px; color:#BBB097; margin-top: 8px; }
+  .err{ color:#D9863D; }
+</style>
+</head>
+<body>
+  <h1>Test: AI dokumentna avtomatizacija</h1>
+  <p>Naloži PDF (npr. povpraševanje gosta) — stran izlušči besedilo in ga pošlje na <code>/api/izlusci-dokument</code>, ki pokliče OpenAI in vrne strukturirane podatke.</p>
+
+  <div class="box">
+    <input type="file" id="pdfInput" accept="application/pdf" />
+    <br>
+    <button id="goBtn" disabled>Preberi in izlušči podatke</button>
+    <div class="status" id="status"></div>
+  </div>
+
+  <div class="box" id="rawBox" style="display:none">
+    <h3>1. Surovo besedilo iz PDF-ja</h3>
+    <pre id="rawText"></pre>
+  </div>
+
+  <div class="box" id="resultBox" style="display:none">
+    <h3>2. Kar je AI samodejno izluščil</h3>
+    <pre id="resultJson"></pre>
+  </div>
+
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+    const fileInput = document.getElementById('pdfInput');
+    const goBtn = document.getElementById('goBtn');
+    const statusEl = document.getElementById('status');
+    const rawBox = document.getElementById('rawBox');
+    const rawText = document.getElementById('rawText');
+    const resultBox = document.getElementById('resultBox');
+    const resultJson = document.getElementById('resultJson');
+
+    let selectedFile = null;
+
+    fileInput.addEventListener('change', () => {
+      selectedFile = fileInput.files[0] || null;
+      goBtn.disabled = !selectedFile;
+      statusEl.textContent = selectedFile ? `Izbrano: ${selectedFile.name}` : '';
+      statusEl.className = 'status';
+    });
+
+    async function extractPdfText(file) {
+      const buf = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+      let fullText = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        fullText += content.items.map(it => it.str).join(' ') + '\n';
+      }
+      return fullText;
+    }
+
+    goBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+      goBtn.disabled = true;
+      statusEl.textContent = 'Berem PDF...';
+      statusEl.className = 'status';
+      try {
+        const besedilo = await extractPdfText(selectedFile);
+        rawText.textContent = besedilo.trim();
+        rawBox.style.display = 'block';
+
+        statusEl.textContent = 'Kličem AI (OpenAI), naj izlušči podatke...';
+
+        const res = await fetch('/api/izlusci-dokument', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ besedilo }),
+        });
+        const data = await res.json();
+
+        if (!res.ok || data.uspesno === false) {
+          throw new Error(data.napaka || `Napaka strežnika (${res.status})`);
+        }
+
+        resultJson.textContent = JSON.stringify(data.podatki, null, 2);
+        resultBox.style.display = 'block';
+        statusEl.textContent = 'Gotovo ✓';
+      } catch (e) {
+        statusEl.textContent = 'Napaka: ' + e.message;
+        statusEl.className = 'status err';
+      } finally {
+        goBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

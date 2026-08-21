@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="sl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Nadzorna plošča — Design Nova AI</title>
+<style>
+  *{ box-sizing: border-box; }
+  body{ font-family: system-ui, sans-serif; max-width: 1000px; margin: 0 auto; padding: 30px 20px 80px; background:#0B0906; color:#F3ECDA; }
+  h1{ font-size: 22px; margin-bottom: 4px; }
+  .sub{ color:#BBB097; font-size: 14px; margin-bottom: 24px; }
+  .tabs{ display:flex; gap: 8px; margin-bottom: 18px; }
+  .tab{ padding: 8px 16px; border-radius: 8px; background:#17130C; border:1px solid #2C2717; cursor:pointer; font-size: 14px; }
+  .tab.active{ background:#CDA349; color:#0B0906; font-weight:700; border-color:#CDA349; }
+  .card{ border:1px solid #2C2717; border-radius: 12px; background:#17130C; padding: 16px 18px; margin-bottom: 12px; }
+  .card-top{ display:flex; justify-content: space-between; align-items:center; gap: 12px; flex-wrap: wrap; }
+  .badge{ font-size: 11px; padding: 3px 9px; border-radius: 100px; text-transform: uppercase; letter-spacing: .04em; font-weight:700; }
+  .badge.caka_pregled{ background: rgba(217,134,61,.2); color:#D9863D; }
+  .badge.odobreno{ background: rgba(111,169,107,.2); color:#6FA96B; }
+  .badge.zavrnjeno{ background: rgba(217,80,61,.2); color:#e06a4f; }
+  .badge.pripravljeno_za_oddajo{ background: rgba(205,163,73,.25); color:#CDA349; }
+  .meta{ font-size: 12.5px; color:#776C51; margin-top:4px; }
+  .details{ margin-top: 12px; display:none; }
+  .details.open{ display:block; }
+  pre{ white-space: pre-wrap; background:#100D08; padding: 12px; border-radius: 8px; font-size: 12.5px; overflow-x:auto; }
+  .actions{ margin-top: 12px; display:flex; gap: 8px; flex-wrap: wrap; }
+  button{ font: inherit; cursor:pointer; border-radius: 8px; padding: 8px 14px; border:1px solid #2C2717; background:#201A10; color:#F3ECDA; }
+  button.approve{ background:#6FA96B; color:#0B0906; border-color:#6FA96B; font-weight:700; }
+  button.reject{ background:#D9863D; color:#0B0906; border-color:#D9863D; font-weight:700; }
+  button.ready{ background:#CDA349; color:#0B0906; border-color:#CDA349; font-weight:700; }
+  button.toggle{ font-size: 12.5px; }
+  .empty{ color:#776C51; padding: 40px; text-align:center; }
+  .activity-item{ font-size: 13px; padding: 8px 0; border-bottom: 1px solid #2C2717; }
+  .activity-item:last-child{ border-bottom:none; }
+  .activity-time{ color:#776C51; font-size: 11.5px; }
+</style>
+</head>
+<body>
+  <h1>Nadzorna plošča — AI avtomatizacije</h1>
+  <p class="sub">Vsi dokumenti in aktivnosti AI avtomatizacij na enem mestu.</p>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="caka_pregled">Čaka pregled</div>
+    <div class="tab" data-tab="odobreno">Odobreno</div>
+    <div class="tab" data-tab="pripravljeno_za_oddajo">Pripravljeno za oddajo</div>
+    <div class="tab" data-tab="zavrnjeno">Zavrnjeno</div>
+    <div class="tab" data-tab="vse">Vsi dokumenti</div>
+    <div class="tab" data-tab="aktivnost">Dnevnik aktivnosti</div>
+  </div>
+
+  <div id="list"></div>
+
+  <script>
+    let trenutniFilter = 'caka_pregled';
+
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        trenutniFilter = tab.dataset.tab;
+        nalozi();
+      });
+    });
+
+    function badge(status) {
+      const oznake = {
+        caka_pregled: 'Čaka pregled',
+        odobreno: 'Odobreno',
+        zavrnjeno: 'Zavrnjeno',
+        pripravljeno_za_oddajo: 'Pripravljeno za oddajo',
+      };
+      return `<span class="badge ${status}">${oznake[status] || status}</span>`;
+    }
+
+    async function nalozi() {
+      const list = document.getElementById('list');
+      list.innerHTML = '<div class="empty">Nalagam...</div>';
+
+      if (trenutniFilter === 'aktivnost') {
+        const res = await fetch('/api/aktivnosti');
+        const data = await res.json();
+        if (!data.uspesno) { list.innerHTML = `<div class="empty">Napaka: ${data.napaka}</div>`; return; }
+        if (!data.aktivnosti.length) { list.innerHTML = '<div class="empty">Še ni aktivnosti.</div>'; return; }
+        list.innerHTML = data.aktivnosti.map(a => `
+          <div class="activity-item">
+            <div class="activity-time">${new Date(a.ustvarjeno).toLocaleString('sl-SI')} — ${a.avtomatizacija}</div>
+            <div>${a.opis}</div>
+          </div>
+        `).join('');
+        return;
+      }
+
+      const q = trenutniFilter === 'vse' ? '' : `?status=${trenutniFilter}`;
+      const res = await fetch('/api/dokumenti' + q);
+      const data = await res.json();
+      if (!data.uspesno) { list.innerHTML = `<div class="empty">Napaka: ${data.napaka}</div>`; return; }
+      if (!data.dokumenti.length) { list.innerHTML = '<div class="empty">Ni dokumentov v tej kategoriji.</div>'; return; }
+
+      list.innerHTML = data.dokumenti.map(d => {
+        const p = d.izlusceni_podatki || {};
+        const racun = p.racun || {};
+        const izdajatelj = p.izdajatelj || {};
+        return `
+        <div class="card" data-id="${d.id}">
+          <div class="card-top">
+            <div>
+              <b>${izdajatelj.naziv || d.vlozitelj || 'Neznan izdajatelj'}</b> — ${racun.stevilka_racuna || d.ime_datoteke || ''}
+              <div class="meta">Prejeto: ${new Date(d.ustvarjeno).toLocaleString('sl-SI')} · Znesek: ${racun.znesek_skupaj || '?'} ${racun.valuta || ''}</div>
+            </div>
+            ${badge(d.status)}
+          </div>
+          <button class="toggle" onclick="preklopiDetajle('${d.id}')">Prikaži/skrij podrobnosti</button>
+          <div class="details" id="det-${d.id}">
+            <pre>${JSON.stringify(p, null, 2)}</pre>
+          </div>
+          <div class="actions">
+            ${d.status === 'caka_pregled' ? `
+              <button class="approve" onclick="posodobi('${d.id}', 'odobreno')">✓ Odobri</button>
+              <button class="reject" onclick="posodobi('${d.id}', 'zavrnjeno')">✕ Zavrni</button>
+            ` : ''}
+            ${d.status === 'odobreno' ? `
+              <button class="ready" onclick="posodobi('${d.id}', 'pripravljeno_za_oddajo')">Označi kot pripravljeno za oddajo</button>
+            ` : ''}
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function preklopiDetajle(id) {
+      document.getElementById('det-' + id).classList.toggle('open');
+    }
+
+    async function posodobi(id, status) {
+      const res = await fetch('/api/posodobi-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status }),
+      });
+      const data = await res.json();
+      if (!data.uspesno) { alert('Napaka: ' + data.napaka); return; }
+      nalozi();
+    }
+
+    nalozi();
+  </script>
+</body>
+</html>

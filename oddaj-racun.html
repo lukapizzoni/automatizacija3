@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="sl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Oddaj račun</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  body{ font-family: system-ui, sans-serif; max-width: 760px; margin: 40px auto; padding: 0 20px; background:#0B0906; color:#F3ECDA; }
+  .box{ border: 1px solid #2C2717; border-radius: 12px; padding: 20px; margin-top: 20px; background:#17130C; }
+  input[type=text]{ width: 100%; padding: 8px; margin: 6px 0 12px; border-radius: 6px; border: 1px solid #2C2717; background:#100D08; color:#F3ECDA; }
+  button{ background:#CDA349; color:#0B0906; border:none; padding: 10px 18px; border-radius: 8px; font-weight: 700; cursor:pointer; }
+  button:disabled{ opacity:.5; cursor:not-allowed; }
+  pre{ white-space: pre-wrap; background:#100D08; padding: 14px; border-radius: 8px; font-size: 13px; overflow-x:auto; }
+  .status{ font-size: 13px; color:#BBB097; margin-top: 8px; }
+  .err{ color:#D9863D; } .ok{ color:#6FA96B; }
+  a{ color:#CDA349; }
+</style>
+</head>
+<body>
+  <h1>Oddaj skeniran račun (simulacija stranke)</h1>
+  <p>To simulira stranko, ki pošlje skeniran/fotografiran račun v računovodstvo.
+     AI ga prebere, izlušči podatke in ga da v čakalno vrsto za pregled.
+     Glej <a href="/nadzorna-plosca.html">nadzorno ploščo</a> za pregled/odobritev.</p>
+
+  <div class="box">
+    <label>Ime stranke (izbirno):</label>
+    <input type="text" id="vlozitelj" placeholder="npr. Adria Mobil d.o.o." />
+
+    <input type="file" id="pdfInput" accept="application/pdf" />
+    <br><br>
+    <button id="goBtn" disabled>Pošlji AI-ju v obdelavo</button>
+    <div class="status" id="status"></div>
+  </div>
+
+  <div class="box" id="resultBox" style="display:none">
+    <h3>Rezultat</h3>
+    <pre id="resultJson"></pre>
+  </div>
+
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    const fileInput = document.getElementById('pdfInput');
+    const goBtn = document.getElementById('goBtn');
+    const statusEl = document.getElementById('status');
+    const resultBox = document.getElementById('resultBox');
+    const resultJson = document.getElementById('resultJson');
+    let selectedFile = null;
+
+    fileInput.addEventListener('change', () => {
+      selectedFile = fileInput.files[0] || null;
+      goBtn.disabled = !selectedFile;
+    });
+
+    async function extractPdfText(file) {
+      const buf = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+      let fullText = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        fullText += content.items.map(it => it.str).join(' ') + '\n';
+      }
+      return fullText;
+    }
+
+    goBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+      goBtn.disabled = true;
+      statusEl.textContent = 'Berem PDF...';
+      statusEl.className = 'status';
+      try {
+        const besedilo = await extractPdfText(selectedFile);
+        statusEl.textContent = 'AI izlušča podatke in shranjuje v bazo...';
+
+        const res = await fetch('/api/sprejmi-racun', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            besedilo,
+            ime_datoteke: selectedFile.name,
+            vlozitelj: document.getElementById('vlozitelj').value || null,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok || data.uspesno === false) throw new Error(data.napaka || `Napaka (${res.status})`);
+
+        resultJson.textContent = JSON.stringify(data, null, 2);
+        resultBox.style.display = 'block';
+        statusEl.textContent = data.zavrnjeno_ker_ni_racun
+          ? 'AI je presodil, da to ni račun — ni bilo shranjeno.'
+          : 'Uspešno shranjeno v bazo, čaka na pregled ✓';
+        statusEl.className = 'status ok';
+      } catch (e) {
+        statusEl.textContent = 'Napaka: ' + e.message;
+        statusEl.className = 'status err';
+      } finally {
+        goBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
