@@ -1,0 +1,9 @@
+{
+  "name": "design-nova-ai-avtomatizacije",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "openai": "^4.68.0",
+    "@supabase/supabase-js": "^2.45.4"
+  }
+}
