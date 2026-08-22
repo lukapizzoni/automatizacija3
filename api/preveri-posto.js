@@ -49,7 +49,7 @@ module.exports = async (req, res) => {
     logger: false,
   });
 
-  const povzetek = { pregledanih_mailov: 0, obdelanih_pdf: 0, shranjenih_racunov: 0, zavrnjenih_ker_ni_racun: 0, napake: [] };
+  const povzetek = { pregledanih_mailov: 0, obdelanih_pdf: 0, shranjenih_racunov: 0, zavrnjenih_ker_ni_racun: 0, napake: [], diagnostika_mailov: [] };
 
   try {
     await client.connect();
@@ -70,6 +70,15 @@ module.exports = async (req, res) => {
         const pdfPriloge = (razclenjeno.attachments || []).filter(
           (p) => p.contentType === "application/pdf" || (p.filename || "").toLowerCase().endsWith(".pdf")
         );
+
+        // ZACASNO -- diagnostika, da vidimo, kaj sporocilo dejansko vsebuje
+        povzetek.diagnostika_mailov.push({
+          zadeva: razclenjeno.subject || null,
+          od: razclenjeno.from?.text || null,
+          stevilo_vseh_prilog: (razclenjeno.attachments || []).length,
+          imena_vseh_prilog: (razclenjeno.attachments || []).map((p) => p.filename + " (" + p.contentType + ")"),
+          stevilo_pdf_prilog: pdfPriloge.length,
+        });
 
         for (const priloga of pdfPriloge) {
           povzetek.obdelanih_pdf++;
@@ -95,8 +104,8 @@ module.exports = async (req, res) => {
           }
         }
 
-        // Oznaci mail kot prebran, da ga naslednjic ne obdelamo se enkrat
-        await client.messageFlagsAdd(uid, ["\\Seen"], { uid: false });
+        // ZACASNO IZKLOPLJENO med diagnostiko, da lahko isti testni mail preverimo veckrat
+        // await client.messageFlagsAdd(uid, ["\\Seen"], { uid: false });
       }
     } finally {
       lock.release();
