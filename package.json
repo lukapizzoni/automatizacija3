@@ -7,6 +7,7 @@
     "@supabase/supabase-js": "^2.45.4",
     "imapflow": "^1.0.171",
     "mailparser": "^3.7.1",
-    "pdfjs-dist": "^3.11.174"
+    "pdfjs-dist": "^3.11.174",
+    "pdf-lib": "^1.17.1"
   }
 }
