@@ -86,6 +86,7 @@ module.exports = async (req, res) => {
 
     // --- 0. Nalozi PDF v Storage (ce je poslan) ---
     let pdf_url = null;
+    let napaka_nalaganja_pdf_besedilo = null; // ZACASNO -- za diagnostiko, vrnemo v odgovoru
     if (pdf_base64) {
       const varnoIme = (ime_datoteke || "racun.pdf").replace(/[^a-zA-Z0-9._-]/g, "_");
       const pot = `${Date.now()}_${varnoIme}`;
@@ -97,6 +98,7 @@ module.exports = async (req, res) => {
 
       if (napakaNalaganja) {
         console.error("Napaka pri nalaganju PDF v Storage:", napakaNalaganja);
+        napaka_nalaganja_pdf_besedilo = String(napakaNalaganja.message || napakaNalaganja);
         // Ne prekinemo celotnega postopka -- AI izlusek je vseeno koristen tudi brez PDF predogleda.
       } else {
         const { data: javniLink } = supabase.storage.from("racuni").getPublicUrl(pot);
@@ -154,7 +156,7 @@ module.exports = async (req, res) => {
       podrobnosti: { dokument_id: dokument.id, zaupanje: izlusceno.zaupanje_izluscka },
     });
 
-    return res.status(200).json({ uspesno: true, dokument });
+    return res.status(200).json({ uspesno: true, dokument, napaka_nalaganja_pdf_besedilo });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ uspesno: false, napaka: String(err && err.message ? err.message : err) });
