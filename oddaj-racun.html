@@ -325,6 +325,8 @@
       } else {
         if (data.napaka_nalaganja_pdf_besedilo) {
           setStatus('Shranjeno, a PDF ni bil naložen v Storage: ' + data.napaka_nalaganja_pdf_besedilo, 'err');
+        } else if (data.napaka_generiranja_pdf_besedilo) {
+          setStatus('Shranjeno, a AI izpis (lep PDF) ni bil ustvarjen: ' + data.napaka_generiranja_pdf_besedilo, 'err');
         } else {
           setStatus('Uspešno shranjeno, čaka na pregled ✓', 'ok');
         }
