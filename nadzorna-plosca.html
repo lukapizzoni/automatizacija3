@@ -224,6 +224,13 @@
              </div>`
           : `<div class="pdf-panel"><div class="pdf-missing">Ni priloženega PDF-ja za ta dokument.</div></div>`;
 
+        const generiranPanel = d.generiran_pdf_url
+          ? `<div class="pdf-panel" style="margin-top:14px;">
+               <div class="pdf-head"><span>AI izpis (lep pregled — ni original, ni oddaja na FURS)</span><a href="${d.generiran_pdf_url}" target="_blank" style="color:#CDA349">Odpri v novem zavihku ↗</a></div>
+               <iframe src="${d.generiran_pdf_url}"></iframe>
+             </div>`
+          : '';
+
         return `
         <div class="card" data-id="${d.id}">
           <div class="card-top" onclick="preklopiDetajle('${d.id}')">
@@ -238,7 +245,10 @@
           </div>
           <div class="details" id="det-${d.id}">
             <div class="split">
-              ${pdfPanel}
+              <div>
+                ${pdfPanel}
+                ${generiranPanel}
+              </div>
               ${lepPrikaz(p)}
             </div>
             <div class="actions">
