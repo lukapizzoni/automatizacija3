@@ -64,6 +64,15 @@
       return fullText;
     }
 
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]); // odstrani "data:application/pdf;base64,"
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
     goBtn.addEventListener('click', async () => {
       if (!selectedFile) return;
       goBtn.disabled = true;
@@ -71,7 +80,9 @@
       statusEl.className = 'status';
       try {
         const besedilo = await extractPdfText(selectedFile);
-        statusEl.textContent = 'AI izlušča podatke in shranjuje v bazo...';
+        statusEl.textContent = 'Nalagam PDF in AI izlušča podatke...';
+
+        const pdf_base64 = await fileToBase64(selectedFile);
 
         const res = await fetch('/api/sprejmi-racun', {
           method: 'POST',
@@ -80,6 +91,7 @@
             besedilo,
             ime_datoteke: selectedFile.name,
             vlozitelj: document.getElementById('vlozitelj').value || null,
+            pdf_base64,
           }),
         });
         const data = await res.json();
@@ -87,10 +99,16 @@
 
         resultJson.textContent = JSON.stringify(data, null, 2);
         resultBox.style.display = 'block';
-        statusEl.textContent = data.zavrnjeno_ker_ni_racun
-          ? 'AI je presodil, da to ni račun — ni bilo shranjeno.'
-          : 'Uspešno shranjeno v bazo, čaka na pregled ✓';
-        statusEl.className = 'status ok';
+        if (data.zavrnjeno_ker_ni_racun) {
+          statusEl.textContent = 'AI je presodil, da to ni račun — ni bilo shranjeno.';
+          statusEl.className = 'status ok';
+        } else if (data.napaka_nalaganja_pdf_besedilo) {
+          statusEl.textContent = 'Shranjeno, AMPAK PDF NI bil naložen v Storage. Napaka: ' + data.napaka_nalaganja_pdf_besedilo;
+          statusEl.className = 'status err';
+        } else {
+          statusEl.textContent = 'Uspešno shranjeno v bazo (vključno s PDF-jem), čaka na pregled ✓';
+          statusEl.className = 'status ok';
+        }
       } catch (e) {
         statusEl.textContent = 'Napaka: ' + e.message;
         statusEl.className = 'status err';
