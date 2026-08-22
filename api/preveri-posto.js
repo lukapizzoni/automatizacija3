@@ -49,7 +49,7 @@ module.exports = async (req, res) => {
     logger: false,
   });
 
-  const povzetek = { pregledanih_mailov: 0, obdelanih_pdf: 0, shranjenih_racunov: 0, zavrnjenih_ker_ni_racun: 0, napake: [], diagnostika_mailov: [] };
+  const povzetek = { pregledanih_mailov: 0, obdelanih_pdf: 0, shranjenih_racunov: 0, zavrnjenih_ker_ni_racun: 0, napake: [] };
 
   try {
     await client.connect();
@@ -70,15 +70,6 @@ module.exports = async (req, res) => {
         const pdfPriloge = (razclenjeno.attachments || []).filter(
           (p) => p.contentType === "application/pdf" || (p.filename || "").toLowerCase().endsWith(".pdf")
         );
-
-        // ZACASNO -- diagnostika, da vidimo, kaj sporocilo dejansko vsebuje
-        povzetek.diagnostika_mailov.push({
-          zadeva: razclenjeno.subject || null,
-          od: razclenjeno.from?.text || null,
-          stevilo_vseh_prilog: (razclenjeno.attachments || []).length,
-          imena_vseh_prilog: (razclenjeno.attachments || []).map((p) => p.filename + " (" + p.contentType + ")"),
-          stevilo_pdf_prilog: pdfPriloge.length,
-        });
 
         for (const priloga of pdfPriloge) {
           povzetek.obdelanih_pdf++;
