@@ -4,6 +4,9 @@
   "private": true,
   "dependencies": {
     "openai": "^4.68.0",
-    "@supabase/supabase-js": "^2.45.4"
+    "@supabase/supabase-js": "^2.45.4",
+    "imapflow": "^1.0.171",
+    "mailparser": "^3.7.1",
+    "pdf-parse": "^1.1.1"
   }
 }
