@@ -3,119 +3,341 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Oddaj račun</title>
+<title>Oddaj račun — Design Nova AI</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
-  body{ font-family: system-ui, sans-serif; max-width: 760px; margin: 40px auto; padding: 0 20px; background:#0B0906; color:#F3ECDA; }
-  .box{ border: 1px solid #2C2717; border-radius: 12px; padding: 20px; margin-top: 20px; background:#17130C; }
-  input[type=text]{ width: 100%; padding: 8px; margin: 6px 0 12px; border-radius: 6px; border: 1px solid #2C2717; background:#100D08; color:#F3ECDA; }
-  button{ background:#CDA349; color:#0B0906; border:none; padding: 10px 18px; border-radius: 8px; font-weight: 700; cursor:pointer; }
-  button:disabled{ opacity:.5; cursor:not-allowed; }
-  pre{ white-space: pre-wrap; background:#100D08; padding: 14px; border-radius: 8px; font-size: 13px; overflow-x:auto; }
-  .status{ font-size: 13px; color:#BBB097; margin-top: 8px; }
-  .err{ color:#D9863D; } .ok{ color:#6FA96B; }
-  a{ color:#CDA349; }
+  @import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root{
+    --bg: #0B0906;
+    --bg-2: #100D08;
+    --surface: #17130C;
+    --surface-2: #201A10;
+    --text: #F3ECDA;
+    --text-soft: #BBB097;
+    --text-faint: #776C51;
+    --line: #2C2717;
+    --accent: #CDA349;
+    --accent-deep: #9C7A29;
+    --good: #6FA96B;
+    --warn: #D9863D;
+    --focus: #E8C468;
+  }
+  *{ box-sizing: border-box; }
+  ::selection{ background: var(--accent); color: var(--bg); }
+  body{
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Hanken Grotesk', ui-sans-serif, system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,h2,h3{ font-family: 'Unbounded', ui-sans-serif, system-ui, sans-serif; margin: 0; }
+  a{ color: var(--accent); text-decoration: none; }
+  a:hover{ text-decoration: underline; }
+  :focus-visible{ outline: 2.5px solid var(--focus); outline-offset: 3px; border-radius: 3px; }
+
+  header{
+    border-bottom: 1px solid var(--line);
+    background: color-mix(in srgb, var(--bg) 86%, transparent);
+    backdrop-filter: blur(10px) saturate(1.1);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .headbar{
+    max-width: 820px; margin: 0 auto; padding: 16px clamp(20px,5vw,40px);
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+  }
+  .logo{ display:flex; align-items:center; gap:10px; white-space:nowrap; }
+  .mark{
+    width: 38px; height: 38px; border-radius: 9px; flex-shrink:0;
+    background: linear-gradient(150deg, var(--accent-deep), var(--accent));
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Unbounded', sans-serif; font-weight:800; color: var(--bg); font-size: 14px;
+    box-shadow: 0 4px 14px -6px rgba(0,0,0,.7);
+  }
+  .logo-word{ font-size:16px; }
+  .logo-word .a{ font-weight:700; }
+  .logo-word .b{ font-family:'Unbounded', sans-serif; font-weight:700; color: var(--accent); font-size:.9em; }
+  .headnav a{ color: var(--text-soft); font-size: 14px; }
+  .headnav a:hover{ color: var(--accent); }
+
+  main{ max-width: 820px; margin: 0 auto; padding: clamp(32px,6vw,56px) clamp(20px,5vw,40px) 100px; }
+
+  .eyebrow{
+    font-family:'JetBrains Mono', ui-monospace, monospace; font-size:12px; letter-spacing:.14em;
+    text-transform:uppercase; color: var(--accent); font-weight:500; margin-bottom:10px; display:block;
+  }
+  h1{ font-size: clamp(24px, 4vw, 32px); margin-bottom: 10px; }
+  .lead{ color: var(--text-soft); font-size: 15px; max-width: 62ch; margin-bottom: 8px; }
+  .lead a{ font-weight:600; }
+
+  .steps{
+    display:flex; gap: 10px; margin: 28px 0; flex-wrap:wrap;
+  }
+  .step{
+    flex:1; min-width:150px; border:1px solid var(--line); border-radius:12px; padding:14px 16px;
+    background: var(--surface); font-size:13px; color: var(--text-soft);
+  }
+  .step b{ display:block; color: var(--text); font-family:'Unbounded',sans-serif; font-size:12.5px; margin-bottom:4px; }
+  .step .n{ color: var(--accent); font-family:'JetBrains Mono', monospace; }
+
+  .card{
+    border: 1px solid var(--line); border-radius: 16px; background: var(--surface);
+    padding: clamp(20px,4vw,32px); margin-top: 24px;
+    box-shadow: 0 12px 32px -18px rgba(0,0,0,.6);
+  }
+  .card h3{ font-size: 15px; margin-bottom: 4px; }
+  .card .hint{ color: var(--text-faint); font-size: 13px; margin-bottom: 18px; }
+
+  label{ display:block; font-size: 13px; color: var(--text-soft); margin-bottom: 6px; font-weight: 600; }
+  input[type=text]{
+    width: 100%; padding: 11px 13px; margin-bottom: 18px; border-radius: 9px;
+    border: 1px solid var(--line); background: var(--bg-2); color: var(--text); font: inherit; font-size:14px;
+    transition: border-color .15s;
+  }
+  input[type=text]:focus{ border-color: var(--accent); outline:none; }
+
+  .dropzone{
+    border: 1.5px dashed var(--line); border-radius: 12px; padding: 26px 18px;
+    text-align:center; background: var(--bg-2); margin-bottom: 20px; position:relative;
+    transition: border-color .15s, background .15s;
+  }
+  .dropzone.has-file{ border-color: var(--good); border-style: solid; }
+  .dropzone.drag{ border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--bg-2)); }
+  .dropzone input[type=file]{
+    position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%;
+  }
+  .dz-icon{ font-size: 26px; margin-bottom: 8px; }
+  .dz-text{ font-size: 14px; color: var(--text-soft); }
+  .dz-text b{ color: var(--accent); }
+  .dz-filename{ margin-top: 10px; font-size: 13px; color: var(--good); font-weight:600; word-break:break-all; }
+
+  button.primary{
+    width: 100%; font: inherit; font-weight: 700; cursor: pointer; border: none; border-radius: 10px;
+    padding: 14px 20px; background: var(--accent); color: var(--bg); font-size: 15px;
+    transition: background .15s, transform .1s, box-shadow .15s;
+  }
+  button.primary:hover:not(:disabled){ background: var(--accent-deep); box-shadow: 0 10px 24px -12px color-mix(in srgb, var(--accent) 70%, transparent); }
+  button.primary:disabled{ opacity: .4; cursor: not-allowed; }
+  button.primary .spin{ display:none; }
+  button.primary.loading .spin{ display:inline-block; animation: spin .8s linear infinite; margin-right:8px; }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+
+  .status{ font-size: 13.5px; margin-top: 14px; padding: 11px 14px; border-radius: 9px; display:none; }
+  .status.show{ display:block; }
+  .status.ok{ background: rgba(111,169,107,.12); color:#a9d1a6; border:1px solid rgba(111,169,107,.3); }
+  .status.err{ background: rgba(217,134,61,.15); color:#e8b98a; border:1px solid rgba(217,134,61,.35); }
+  .status.info{ background: var(--bg-2); color: var(--text-soft); border:1px solid var(--line); }
+
+  .result-card{ display:none; margin-top: 20px; }
+  .result-card.show{ display:block; }
+  .result-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
+  .toggle-raw{ font-size:12px; color: var(--text-faint); text-decoration:underline; cursor:pointer; background:none; border:none; padding:0; font-family:inherit; }
+  pre{
+    white-space: pre-wrap; background: var(--bg-2); padding: 14px; border-radius: 10px;
+    font-size: 12.5px; overflow-x: auto; border: 1px solid var(--line); color: var(--text-soft);
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  .summary-grid{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 4px; }
+  @media (max-width: 560px){ .summary-grid{ grid-template-columns: 1fr; } }
+  .summary-item{ border:1px solid var(--line); border-radius:10px; padding:12px 14px; background: var(--bg-2); }
+  .summary-item .k{ font-size:11px; text-transform:uppercase; letter-spacing:.05em; color: var(--text-faint); margin-bottom:4px; }
+  .summary-item .v{ font-size:14.5px; font-weight:700; }
+
+  footer{ text-align:center; color: var(--text-faint); font-size:12.5px; padding: 30px 20px; border-top:1px solid var(--line); margin-top: 40px; }
 </style>
 </head>
 <body>
-  <h1>Oddaj skeniran račun (simulacija stranke)</h1>
-  <p>To simulira stranko, ki pošlje skeniran/fotografiran račun v računovodstvo.
-     AI ga prebere, izlušči podatke in ga da v čakalno vrsto za pregled.
-     Glej <a href="/nadzorna-plosca.html">nadzorno ploščo</a> za pregled/odobritev.</p>
 
-  <div class="box">
-    <label>Ime stranke (izbirno):</label>
+<header>
+  <div class="headbar">
+    <div class="logo">
+      <div class="mark">DN</div>
+      <div class="logo-word"><span class="a">Design</span> <span class="b">Nova</span></div>
+    </div>
+    <nav class="headnav"><a href="/nadzorna-plosca.html">Nadzorna plošča →</a></nav>
+  </div>
+</header>
+
+<main>
+  <span class="eyebrow">AI dokumentna avtomatizacija</span>
+  <h1>Oddaj skeniran račun</h1>
+  <p class="lead">
+    Naloži PDF prejetega računa — AI ga prebere, izlušči vse ključne podatke (izdajatelj,
+    zneski, DDV po stopnjah) in ga postavi v čakalno vrsto za pregled računovodje.
+    Nič se ne pošlje naprej samodejno — vsak dokument najprej odobri človek.
+    Rezultate spremljaš na <a href="/nadzorna-plosca.html">nadzorni plošči</a>.
+  </p>
+
+  <div class="steps">
+    <div class="step"><span class="n">01</span><b>Naloži PDF</b>Skeniran ali fotografiran račun</div>
+    <div class="step"><span class="n">02</span><b>AI izlušči podatke</b>Zneski, DDV, izdajatelj</div>
+    <div class="step"><span class="n">03</span><b>Čaka pregled</b>Računovodja odobri/zavrne</div>
+  </div>
+
+  <div class="card">
+    <h3>Podatki o oddaji</h3>
+    <p class="hint">Ime stranke je izbirno — če ga ne izpolniš, ga AI poskusi razbrati iz samega računa.</p>
+
+    <label for="vlozitelj">Ime stranke (izbirno)</label>
     <input type="text" id="vlozitelj" placeholder="npr. Adria Mobil d.o.o." />
 
-    <input type="file" id="pdfInput" accept="application/pdf" />
-    <br><br>
-    <button id="goBtn" disabled>Pošlji AI-ju v obdelavo</button>
+    <label>Račun (PDF)</label>
+    <div class="dropzone" id="dropzone">
+      <input type="file" id="pdfInput" accept="application/pdf" />
+      <div class="dz-icon">📄</div>
+      <div class="dz-text"><b>Klikni za izbiro</b> ali povleci PDF sem</div>
+      <div class="dz-filename" id="dzFilename"></div>
+    </div>
+
+    <button id="goBtn" class="primary" disabled>
+      <span class="spin">⏳</span>Pošlji AI-ju v obdelavo
+    </button>
+
     <div class="status" id="status"></div>
   </div>
 
-  <div class="box" id="resultBox" style="display:none">
-    <h3>Rezultat</h3>
-    <pre id="resultJson"></pre>
+  <div class="card result-card" id="resultBox">
+    <div class="result-head">
+      <h3>Rezultat izluščanja</h3>
+      <button class="toggle-raw" id="toggleRaw" type="button">Prikaži surove podatke (JSON)</button>
+    </div>
+    <div class="summary-grid" id="summaryGrid"></div>
+    <pre id="resultJson" style="display:none; margin-top:14px;"></pre>
   </div>
+</main>
 
-  <script>
-    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-    const fileInput = document.getElementById('pdfInput');
-    const goBtn = document.getElementById('goBtn');
-    const statusEl = document.getElementById('status');
-    const resultBox = document.getElementById('resultBox');
-    const resultJson = document.getElementById('resultJson');
-    let selectedFile = null;
+<footer>Design Nova AI — interni sistem za avtomatizacijo dokumentov</footer>
 
-    fileInput.addEventListener('change', () => {
-      selectedFile = fileInput.files[0] || null;
-      goBtn.disabled = !selectedFile;
-    });
+<script>
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  const fileInput = document.getElementById('pdfInput');
+  const dropzone = document.getElementById('dropzone');
+  const dzFilename = document.getElementById('dzFilename');
+  const goBtn = document.getElementById('goBtn');
+  const statusEl = document.getElementById('status');
+  const resultBox = document.getElementById('resultBox');
+  const resultJson = document.getElementById('resultJson');
+  const summaryGrid = document.getElementById('summaryGrid');
+  const toggleRaw = document.getElementById('toggleRaw');
+  let selectedFile = null;
 
-    async function extractPdfText(file) {
-      const buf = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
-      let fullText = '';
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-        fullText += content.items.map(it => it.str).join(' ') + '\n';
-      }
-      return fullText;
+  function setFile(file) {
+    selectedFile = file || null;
+    goBtn.disabled = !selectedFile;
+    dropzone.classList.toggle('has-file', !!selectedFile);
+    dzFilename.textContent = selectedFile ? '✓ ' + selectedFile.name : '';
+  }
+
+  fileInput.addEventListener('change', () => setFile(fileInput.files[0]));
+  ['dragenter','dragover'].forEach(ev => dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.add('drag'); }));
+  ['dragleave','drop'].forEach(ev => dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.remove('drag'); }));
+  dropzone.addEventListener('drop', e => {
+    const f = e.dataTransfer.files[0];
+    if (f && f.type === 'application/pdf') { fileInput.files = e.dataTransfer.files; setFile(f); }
+  });
+
+  toggleRaw.addEventListener('click', () => {
+    const showing = resultJson.style.display !== 'none';
+    resultJson.style.display = showing ? 'none' : 'block';
+    toggleRaw.textContent = showing ? 'Prikaži surove podatke (JSON)' : 'Skrij surove podatke';
+  });
+
+  function setStatus(text, kind) {
+    statusEl.textContent = text;
+    statusEl.className = 'status show ' + (kind || 'info');
+  }
+
+  async function extractPdfText(file) {
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    let fullText = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      fullText += content.items.map(it => it.str).join(' ') + '\n';
     }
+    return fullText;
+  }
 
-    function fileToBase64(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result.split(',')[1]); // odstrani "data:application/pdf;base64,"
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function fmtEUR(n) {
+    if (n === null || n === undefined) return '—';
+    return Number(n).toFixed(2) + ' €';
+  }
+
+  function renderSummary(izlusceno) {
+    const izd = izlusceno.izdajatelj || {};
+    const rac = izlusceno.racun || {};
+    const items = [
+      ['Izdajatelj', izd.naziv || '—'],
+      ['Št. računa', rac.stevilka_racuna || '—'],
+      ['Datum izdaje', rac.datum_izdaje || '—'],
+      ['Znesek brez DDV', fmtEUR(rac.znesek_brez_ddv)],
+      ['Skupaj', fmtEUR(rac.znesek_skupaj)],
+      ['Zaupanje AI', izlusceno.zaupanje_izluscka || '—'],
+    ];
+    summaryGrid.innerHTML = items.map(([k, v]) =>
+      `<div class="summary-item"><div class="k">${k}</div><div class="v">${v}</div></div>`
+    ).join('');
+  }
+
+  goBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+    goBtn.disabled = true;
+    goBtn.classList.add('loading');
+    resultBox.classList.remove('show');
+    setStatus('Berem PDF...', 'info');
+    try {
+      const besedilo = await extractPdfText(selectedFile);
+      setStatus('Nalagam PDF in AI izlušča podatke...', 'info');
+
+      const pdf_base64 = await fileToBase64(selectedFile);
+
+      const res = await fetch('/api/sprejmi-racun', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          besedilo,
+          ime_datoteke: selectedFile.name,
+          vlozitelj: document.getElementById('vlozitelj').value || null,
+          pdf_base64,
+        }),
       });
-    }
+      const data = await res.json();
+      if (!res.ok || data.uspesno === false) throw new Error(data.napaka || `Napaka (${res.status})`);
 
-    goBtn.addEventListener('click', async () => {
-      if (!selectedFile) return;
-      goBtn.disabled = true;
-      statusEl.textContent = 'Berem PDF...';
-      statusEl.className = 'status';
-      try {
-        const besedilo = await extractPdfText(selectedFile);
-        statusEl.textContent = 'Nalagam PDF in AI izlušča podatke...';
+      resultJson.textContent = JSON.stringify(data, null, 2);
 
-        const pdf_base64 = await fileToBase64(selectedFile);
-
-        const res = await fetch('/api/sprejmi-racun', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            besedilo,
-            ime_datoteke: selectedFile.name,
-            vlozitelj: document.getElementById('vlozitelj').value || null,
-            pdf_base64,
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok || data.uspesno === false) throw new Error(data.napaka || `Napaka (${res.status})`);
-
-        resultJson.textContent = JSON.stringify(data, null, 2);
-        resultBox.style.display = 'block';
-        if (data.zavrnjeno_ker_ni_racun) {
-          statusEl.textContent = 'AI je presodil, da to ni račun — ni bilo shranjeno.';
-          statusEl.className = 'status ok';
-        } else if (data.napaka_nalaganja_pdf_besedilo) {
-          statusEl.textContent = 'Shranjeno, AMPAK PDF NI bil naložen v Storage. Napaka: ' + data.napaka_nalaganja_pdf_besedilo;
-          statusEl.className = 'status err';
+      if (data.zavrnjeno_ker_ni_racun) {
+        setStatus('AI je presodil, da to ni račun — ni bilo shranjeno.', 'info');
+        summaryGrid.innerHTML = '';
+      } else {
+        if (data.napaka_nalaganja_pdf_besedilo) {
+          setStatus('Shranjeno, a PDF ni bil naložen v Storage: ' + data.napaka_nalaganja_pdf_besedilo, 'err');
         } else {
-          statusEl.textContent = 'Uspešno shranjeno v bazo (vključno s PDF-jem), čaka na pregled ✓';
-          statusEl.className = 'status ok';
+          setStatus('Uspešno shranjeno, čaka na pregled ✓', 'ok');
         }
-      } catch (e) {
-        statusEl.textContent = 'Napaka: ' + e.message;
-        statusEl.className = 'status err';
-      } finally {
-        goBtn.disabled = false;
+        renderSummary(data.dokument?.izlusceni_podatki || {});
       }
-    });
-  </script>
+      resultBox.classList.add('show');
+    } catch (e) {
+      setStatus('Napaka: ' + e.message, 'err');
+    } finally {
+      goBtn.disabled = false;
+      goBtn.classList.remove('loading');
+    }
+  });
+</script>
 </body>
 </html>
