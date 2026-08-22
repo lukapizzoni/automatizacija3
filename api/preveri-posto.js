@@ -17,7 +17,7 @@
 //   POSTA_TAJNI_KLJUC   -- poljuben skrivni niz, da te poti ne more sprozit kdorkoli na spletu
 
 const { ImapFlow } = require("imapflow");
-const pdfParse = require("pdf-parse");
+const { izlusciBesediloIzPdf } = require("../lib/pdf-tekst");
 const { obdelajRacun } = require("../lib/obdelaj-racun");
 
 module.exports = async (req, res) => {
@@ -83,7 +83,7 @@ module.exports = async (req, res) => {
         for (const priloga of pdfPriloge) {
           povzetek.obdelanih_pdf++;
           try {
-            const besedilo = (await pdfParse(priloga.content)).text;
+            const besedilo = await izlusciBesediloIzPdf(priloga.content);
             const pdf_base64 = priloga.content.toString("base64");
 
             const rezultat = await obdelajRacun({
@@ -104,8 +104,8 @@ module.exports = async (req, res) => {
           }
         }
 
-        // ZACASNO IZKLOPLJENO med diagnostiko, da lahko isti testni mail preverimo veckrat
-        // await client.messageFlagsAdd(uid, ["\\Seen"], { uid: false });
+        // Oznaci mail kot prebran, da ga naslednjic ne obdelamo se enkrat
+        await client.messageFlagsAdd(uid, ["\\Seen"], { uid: false });
       }
     } finally {
       lock.release();
